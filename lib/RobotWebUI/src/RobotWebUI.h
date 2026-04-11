@@ -36,11 +36,17 @@ private:
     unsigned long _lastSystemPush = 0;
     static const unsigned long SYSTEM_PUSH_INTERVAL = 3000; // 3 seconds
 
+    // Motor safety timeout (MOTO-04 / D-03)
+    unsigned long _lastMotorCommand = 0;
+    bool _motorsActive = false;
+    static const unsigned long MOTOR_SAFETY_TIMEOUT = 500; // ms
+
     // Internal handlers
     void handleWSMessage(const char* data, size_t len);
     void handleWSConnect(bool connected);
     void handleWSDisconnect(bool connected);
     void pushSystemInfo();
+    void emergencyStop();
 
     // Internal broadcast helper (serializes protocol message and sends)
     void broadcast(char* buf, size_t len);
