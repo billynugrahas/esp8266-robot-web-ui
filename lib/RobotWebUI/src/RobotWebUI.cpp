@@ -37,6 +37,8 @@ void RobotWebUI::begin(const char* ssid, const char* password, int motorCount) {
     // Serve dashboard page from PROGMEM
     _transport->servePage((const uint8_t*)INDEX_HTML, sizeof(INDEX_HTML));
 
+    Serial.printf("[RobotWebUI] Dashboard PROGMEM: %u bytes (%.1f KB)\n",
+        sizeof(INDEX_HTML), sizeof(INDEX_HTML) / 1024.0);
     Serial.printf("[RobotWebUI] Started with %d motor(s)\n", _motorCount);
 }
 
