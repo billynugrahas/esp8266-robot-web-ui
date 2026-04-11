@@ -44,6 +44,11 @@ void RobotWebUI::loop() {
     if (!_transport) return;
     _transport->loop();
 
+    // Motor safety timeout -- auto-stop after 500ms silence (MOTO-04 / D-03)
+    if (_motorsActive && (millis() - _lastMotorCommand > MOTOR_SAFETY_TIMEOUT)) {
+        emergencyStop();
+    }
+
     // Periodic system info push (WIFI-02)
     if (millis() - _lastSystemPush >= SYSTEM_PUSH_INTERVAL) {
         pushSystemInfo();
@@ -102,7 +107,15 @@ void RobotWebUI::handleWSMessage(const char* data, size_t len) {
             JsonDocument& doc = _protocol.document();
             cmd.direction = doc["d"]["dir"] | "stop";
             cmd.speed = doc["d"]["spd"] | 0;
+            // Validate direction -- silently ignore invalid commands
+            if (cmd.direction != "forward" && cmd.direction != "back" &&
+                cmd.direction != "left" && cmd.direction != "right" &&
+                cmd.direction != "stop") {
+                return;
+            }
             _motorCallback(cmd);
+            _lastMotorCommand = millis();
+            _motorsActive = (cmd.direction != "stop");
         }
     } else if (strcmp(type, MsgType::WIFI_CMD) == 0) {
         if (_wifiCallback) {
@@ -119,10 +132,14 @@ void RobotWebUI::handleWSMessage(const char* data, size_t len) {
 
 void RobotWebUI::handleWSConnect(bool connected) {
     Serial.println("[RobotWebUI] WebSocket client connected");
+    _motorsActive = false;
 }
 
 void RobotWebUI::handleWSDisconnect(bool connected) {
     Serial.println("[RobotWebUI] WebSocket client disconnected");
+    if (_motorsActive) {
+        emergencyStop();
+    }
 }
 
 void RobotWebUI::pushSystemInfo() {
@@ -143,5 +160,22 @@ void RobotWebUI::pushSystemInfo() {
 void RobotWebUI::broadcast(char* buf, size_t len) {
     if (_transport && _transport->wsConnected()) {
         _transport->wsBroadcast(buf, len);
+    }
+}
+
+void RobotWebUI::emergencyStop() {
+    if (_motorCallback) {
+        MotorCmd stopCmd;
+        stopCmd.direction = "stop";
+        stopCmd.speed = 0;
+        _motorCallback(stopCmd);
+    }
+    _motorsActive = false;
+    Serial.println("[RobotWebUI] Motor safety timeout -- all motors stopped");
+    // Notify browser of motor timeout alert (D-12)
+    if (_transport && _transport->wsConnected()) {
+        char buf[64];
+        _protocol.buildAck("motor_timeout", buf, sizeof(buf));
+        _transport->wsBroadcast(buf, strlen(buf));
     }
 }
