@@ -1,0 +1,47 @@
+#pragma once
+#include "ITransport.h"
+#include "WSProtocol.h"
+
+class RobotWebUI {
+public:
+    // D-01: constructor takes no args, all config in begin()
+    RobotWebUI();
+
+    // D-01: single setup call. motorCount defaults to 2 (differential drive)
+    void begin(const char* ssid, const char* password, int motorCount = 2);
+
+    // Must be called in loop() for Arduino transport
+    void loop();
+
+    // D-02: typed push methods per sensor
+    void pushDistance(float cm);
+    void pushIR(bool detected);
+    void pushOdometry(float x, float y, float heading);
+    void pushBoolean(int index, bool state);
+
+    // D-03: per-type callbacks with typed structs
+    void onMotorCommand(void (*cb)(const MotorCmd&));
+    void onWiFiCommand(void (*cb)(const WiFiCmd&));
+
+private:
+    ITransport* _transport;
+    WSProtocol _protocol;
+    int _motorCount;
+
+    // Callbacks
+    void (*_motorCallback)(const MotorCmd&) = nullptr;
+    void (*_wifiCallback)(const WiFiCmd&) = nullptr;
+
+    // System info push timer
+    unsigned long _lastSystemPush = 0;
+    static const unsigned long SYSTEM_PUSH_INTERVAL = 3000; // 3 seconds
+
+    // Internal handlers
+    void handleWSMessage(const char* data, size_t len);
+    void handleWSConnect(bool connected);
+    void handleWSDisconnect(bool connected);
+    void pushSystemInfo();
+
+    // Internal broadcast helper (serializes protocol message and sends)
+    void broadcast(char* buf, size_t len);
+};
