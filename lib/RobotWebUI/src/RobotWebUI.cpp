@@ -1,5 +1,6 @@
 #include "RobotWebUI.h"
 #include "ArduinoTransport.h"
+#include "pages.h"
 #include <ESP8266WiFi.h>
 
 RobotWebUI::RobotWebUI()
@@ -32,6 +33,9 @@ void RobotWebUI::begin(const char* ssid, const char* password, int motorCount) {
         Serial.println("[RobotWebUI] WiFi connection failed");
         return;
     }
+
+    // Serve dashboard page from PROGMEM
+    _transport->servePage((const uint8_t*)INDEX_HTML, sizeof(INDEX_HTML));
 
     Serial.printf("[RobotWebUI] Started with %d motor(s)\n", _motorCount);
 }
