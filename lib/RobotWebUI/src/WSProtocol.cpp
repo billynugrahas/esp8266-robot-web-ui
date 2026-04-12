@@ -1,4 +1,5 @@
 #include "WSProtocol.h"
+#include <ESP8266WiFi.h>
 
 WSProtocol::WSProtocol() {
 }
@@ -56,6 +57,22 @@ void WSProtocol::buildAck(const char* msg, char* buf, size_t bufSize) {
     JsonObject d = _doc["d"].to<JsonObject>();
     d["msg"] = msg;
     serializeJson(_doc, buf, bufSize);
+}
+
+int WSProtocol::buildWifiScan(char* buf, size_t bufSize, int networkCount) {
+    _doc.clear();
+    _doc["t"] = MsgType::WIFI_SCAN;
+    JsonObject d = _doc["d"].to<JsonObject>();
+    JsonArray networks = d["networks"].to<JsonArray>();
+
+    for (int i = 0; i < networkCount && i < 15; i++) {
+        JsonObject net = networks.add<JsonObject>();
+        net["ssid"] = WiFi.SSID(i);
+        net["rssi"] = WiFi.RSSI(i);
+        net["enc"] = WiFi.encryptionType(i);
+    }
+
+    return serializeJson(_doc, buf, bufSize);
 }
 
 const char* WSProtocol::parseMessageType(const char* data, size_t len) {

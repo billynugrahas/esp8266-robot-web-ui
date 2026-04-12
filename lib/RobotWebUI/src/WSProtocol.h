@@ -9,8 +9,9 @@ namespace MsgType {
     constexpr const char* ODOMETRY = "odo";
     constexpr const char* BOOLEAN  = "bool";
     constexpr const char* MOTOR    = "motor";
-    constexpr const char* WIFI_CMD = "wifi";
-    constexpr const char* ACK      = "ack";
+    constexpr const char* WIFI_CMD  = "wifi";
+    constexpr const char* WIFI_SCAN = "wifi_scan";
+    constexpr const char* ACK       = "ack";
 }
 
 // Typed command structs for callbacks (D-03)
@@ -35,6 +36,7 @@ public:
     void buildOdometry(float x, float y, float heading, char* buf, size_t bufSize);
     void buildBoolean(int index, bool state, char* buf, size_t bufSize);
     void buildAck(const char* msg, char* buf, size_t bufSize);
+    int buildWifiScan(char* buf, size_t bufSize, int networkCount);
 
     // Parse incoming message type. Returns nullptr for unknown types.
     const char* parseMessageType(const char* data, size_t len);
