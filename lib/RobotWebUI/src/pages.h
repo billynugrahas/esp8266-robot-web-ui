@@ -1,3 +1,11 @@
+// PROGMEM Budget: INDEX_HTML
+// Current size: ~16.1 KB raw (sizeof(INDEX_HTML) verified at build time)
+// Flash budget:  45 KB target (40 KB threshold for build warning)
+// Headroom:      ~72% remaining
+// Last updated:  2026-04-12
+//
+// When modifying this file, check boot serial log for actual size:
+//   [RobotWebUI] Dashboard PROGMEM: NNNNN bytes (XX.X KB)
 #pragma once
 #include <Arduino.h>
 

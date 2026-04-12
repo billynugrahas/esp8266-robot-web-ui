@@ -58,6 +58,12 @@ void RobotWebUI::begin(const char* ssid, const char* password, int motorCount) {
 
     Serial.printf("[RobotWebUI] Dashboard PROGMEM: %u bytes (%.1f KB)\n",
         sizeof(INDEX_HTML), sizeof(INDEX_HTML) / 1024.0);
+    Serial.printf("[RobotWebUI] Estimated gzipped: ~%.1f KB (%.0f%% compression)\n",
+        sizeof(INDEX_HTML) * 0.35 / 1024.0,
+        65.0);
+    Serial.printf("[RobotWebUI] Flash budget: %.1f KB / 45.0 KB (%.0f%% used)\n",
+        sizeof(INDEX_HTML) / 1024.0,
+        (sizeof(INDEX_HTML) / 1024.0) / 45.0 * 100.0);
     Serial.printf("[RobotWebUI] Started with %d motor(s)\n", _motorCount);
 }
 
