@@ -56,6 +56,19 @@ body{font-family:var(--font-stack);background:var(--bg);color:var(--text);min-he
 .sw-state{display:inline-block;padding:2px 10px;border-radius:var(--radius-badge);font-size:0.75rem;font-weight:700;transition:background var(--transition-normal),color var(--transition-normal)}
 .sw-state.on{background:var(--success);color:#fff}
 .sw-state.off{background:var(--border);color:var(--text-muted)}
+.wifi-row{display:flex;justify-content:space-between;align-items:center;padding:0.6rem 0.5rem;border-bottom:1px solid var(--border);cursor:pointer;transition:background var(--transition-fast)}
+.wifi-row:hover{background:var(--border)}
+.wifi-row:last-child{border-bottom:none}
+.wifi-ssid{font-size:0.85rem;color:var(--text);display:flex;align-items:center;gap:6px}
+.wifi-bars{font-size:0.7rem;letter-spacing:1px;color:var(--success-light)}
+.scan-btn{width:100%;height:44px;background:var(--btn-bg);color:var(--text);border:none;border-radius:var(--radius-btn);font-size:0.85rem;font-weight:700;cursor:pointer;transition:transform var(--transition-fast),background var(--transition-normal);margin-bottom:0.5rem}
+.scan-btn:active{transform:scale(0.96)}
+.scan-btn:disabled{opacity:0.5;cursor:not-allowed}
+.wifi-input{flex:1;height:44px;padding:0 12px;background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:6px;font-size:0.85rem;font-family:var(--font-stack)}
+.wifi-input:focus{outline:none;border-color:var(--accent)}
+.wifi-toggle{cursor:pointer;font-size:20px;color:var(--text-muted);user-select:none;-webkit-user-select:none;padding:0 8px}
+.connect-btn{width:100%;height:44px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-btn);font-size:0.85rem;font-weight:700;cursor:pointer;transition:transform var(--transition-fast);margin-top:0.5rem}
+.connect-btn:active{transform:scale(0.96)}
 </style>
 </head>
 <body>
@@ -128,6 +141,20 @@ body{font-family:var(--font-stack);background:var(--bg);color:var(--text);min-he
 <div class="info-row">
 <span class="info-label">WiFi Signal</span>
 <span class="info-value" id="val-rssi">--</span>
+</div>
+</div>
+<hr class="divider">
+<div class="section">
+<p class="section-title">WIFI NETWORKS</p>
+<button class="scan-btn" id="scanBtn">Scan Networks</button>
+<div id="scanResults" style="max-height:180px;overflow-y:auto"></div>
+<div id="wifiConnect" style="display:none">
+<div style="display:flex;align-items:center;gap:8px;margin-top:0.5rem">
+<input id="wifiPw" type="password" class="wifi-input" placeholder="Enter password">
+<span class="wifi-toggle" id="pwToggle">&#128065;</span>
+</div>
+<input id="wifiSsid" type="hidden">
+<button class="connect-btn" id="connectBtn">Connect</button>
 </div>
 </div>
 </div>
