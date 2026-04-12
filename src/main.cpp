@@ -5,8 +5,8 @@
 
 #include <RobotWebUI.h>
 
-const char* WIFI_SSID = "YourSSID";
-const char* WIFI_PASS = "YourPassword";
+const char* WIFI_SSID = "Niagraha";
+const char* WIFI_PASS = "Niagraha2014";
 
 RobotWebUI ui;
 
