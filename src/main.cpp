@@ -1,3 +1,8 @@
+// Full-Featured RobotWebUI Demo
+// Exercises all library features: motor control callback, simulated
+// distance/IR/odometry/boolean sensors, and heap stability monitoring.
+// Upload to ESP8266 and open Serial Monitor at 115200 baud to observe.
+
 #include <RobotWebUI.h>
 
 const char* WIFI_SSID = "YourSSID";
@@ -5,9 +10,14 @@ const char* WIFI_PASS = "YourPassword";
 
 RobotWebUI ui;
 
-// Phase 2: Simulated sensor state for demonstration
+// Simulated sensor state for demonstration
 unsigned long lastSensorPush = 0;
 const unsigned long SENSOR_PUSH_INTERVAL = 1000; // 1 second
+
+// Heap stability monitoring (D-02, D-11)
+unsigned long lastHeapLog = 0;
+const unsigned long HEAP_LOG_INTERVAL = 5000; // 5 seconds
+
 float simDist = 50.0;
 float simX = 0.0, simY = 0.0, simHeading = 0.0;
 bool simIR = false;
@@ -15,13 +25,13 @@ bool simSwitches[4] = {true, false, true, false};
 int simSwitchToggle = 0;
 
 void onMotor(const MotorCmd& cmd) {
-    Serial.printf("[Motor] dir=%s spd=%d%%\n", cmd.direction.c_str(), cmd.speed);
+    Serial.printf("[Demo] Motor cmd: dir=%s spd=%d%%\n", cmd.direction.c_str(), cmd.speed);
 }
 
 void setup() {
     Serial.begin(115200);
     delay(100);
-    Serial.println("\n[RobotWebUI] Phase 2 Demo Starting...");
+    Serial.println("\n[Demo] Starting full-featured RobotWebUI demo...");
 
     ui.onMotorCommand(onMotor);
     ui.begin(WIFI_SSID, WIFI_PASS);
@@ -29,6 +39,12 @@ void setup() {
 
 void loop() {
     ui.loop();
+
+    // Heap monitoring: log free heap every 5 seconds (D-02, D-11)
+    if (millis() - lastHeapLog >= HEAP_LOG_INTERVAL) {
+        lastHeapLog = millis();
+        Serial.printf("[Demo] Free heap: %d bytes\n", ESP.getFreeHeap());
+    }
 
     // Simulate sensor data push every second
     if (millis() - lastSensorPush >= SENSOR_PUSH_INTERVAL) {
