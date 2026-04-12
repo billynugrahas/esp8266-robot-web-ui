@@ -270,12 +270,16 @@ el.className='sw-state '+(st?'on':'off');
 var slider=document.getElementById('speed-slider');
 var speedVal=document.getElementById('speed-val');
 slider.oninput=function(){curSpeed=parseInt(this.value);speedVal.textContent=curSpeed};
+var holdTimer=null;
+var holdDir=null;
+function startHold(dir){stopHold();holdDir=dir;sendMotor(dir);holdTimer=setInterval(function(){sendMotor(holdDir)},200)}
+function stopHold(){if(holdTimer){clearInterval(holdTimer);holdTimer=null;if(holdDir&&holdDir!=='stop')sendMotor('stop');holdDir=null}}
 var dpadBtns=document.querySelectorAll('.dpad button');
 for(var i=0;i<dpadBtns.length;i++){
-dpadBtns[i].addEventListener('pointerdown',function(e){
-e.preventDefault();
-sendMotor(this.getAttribute('data-dir'));
-});
+dpadBtns[i].addEventListener('pointerdown',function(e){e.preventDefault();startHold(this.getAttribute('data-dir'))});
+dpadBtns[i].addEventListener('pointerup',stopHold);
+dpadBtns[i].addEventListener('pointerleave',stopHold);
+dpadBtns[i].addEventListener('pointercancel',stopHold);
 }
 document.getElementById('estop-btn').addEventListener('pointerdown',function(e){
 e.preventDefault();
