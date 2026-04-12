@@ -180,7 +180,11 @@ if(msg.t==='dist')updateDist(msg.d);
 if(msg.t==='ir')updateIR(msg.d);
 if(msg.t==='odo')updateOdo(msg.d);
 if(msg.t==='bool')updateSwitch(msg.d.idx,msg.d.st);
-if(msg.t==='ack'&&msg.d&&msg.d.msg==='motor_timeout')showAlert('Motor timeout -- auto-stopped','warning');
+if(msg.t==='wifi_scan')handleScanResults(msg.d);
+if(msg.t==='ack'&&msg.d){
+if(msg.d.msg==='motor_timeout')showAlert('Motor timeout -- auto-stopped','warning');
+if(msg.d.alert)showAlert(msg.d.msg,msg.d.alert);
+}
 };
 }
 function updateConnection(on){
@@ -270,6 +274,64 @@ e.preventDefault();
 sendMotor('stop');
 });
 connectWS();
+function handleScanResults(d){
+var container=document.getElementById('scanResults');
+container.innerHTML='';
+var nets=d.networks||[];
+nets.sort(function(a,b){return b.rssi-a.rssi});
+for(var i=0;i<nets.length;i++){
+var n=nets[i];
+var row=document.createElement('div');
+row.className='wifi-row';
+var nameSpan=document.createElement('span');
+nameSpan.className='wifi-ssid';
+var lock=(n.enc!==7)?'\uD83D\uDD12':'';
+nameSpan.textContent=lock+' '+n.ssid;
+var barsSpan=document.createElement('span');
+barsSpan.className='wifi-bars';
+barsSpan.textContent=rssiToBars(n.rssi);
+row.appendChild(nameSpan);
+row.appendChild(barsSpan);
+row.addEventListener('click',(function(ssid){return function(){selectNet(ssid)}})(n.ssid));
+container.appendChild(row);
+}
+var btn=document.getElementById('scanBtn');
+btn.textContent='Scan Networks';
+btn.disabled=false;
+}
+function rssiToBars(rssi){
+if(rssi>=-50)return '\u2588\u2588\u2588\u2588';
+if(rssi>=-60)return '\u2588\u2588\u2588\u2591';
+if(rssi>=-70)return '\u2588\u2588\u2591\u2591';
+return '\u2588\u2591\u2591\u2591';
+}
+function selectNet(ssid){
+document.getElementById('wifiSsid').value=ssid;
+document.getElementById('wifiConnect').style.display='block';
+document.getElementById('wifiPw').value='';
+document.getElementById('wifiPw').focus();
+}
+function startScan(){
+var btn=document.getElementById('scanBtn');
+btn.textContent='Scanning...';
+btn.disabled=true;
+if(ws&&ws.readyState===1)ws.send(JSON.stringify({t:"wifi",d:{act:"scan"}}));
+}
+function connectWifi(){
+var ssid=document.getElementById('wifiSsid').value;
+var pw=document.getElementById('wifiPw').value;
+if(!ssid)return;
+showAlert('Connecting to '+ssid+'...','warning');
+if(ws&&ws.readyState===1)ws.send(JSON.stringify({t:"wifi",d:{act:"connect",ssid:ssid,pw:pw}}));
+document.getElementById('wifiPw').value='';
+}
+function togglePw(){
+var inp=document.getElementById('wifiPw');
+inp.type=inp.type==='password'?'text':'password';
+}
+document.getElementById('scanBtn').addEventListener('click',startScan);
+document.getElementById('connectBtn').addEventListener('click',connectWifi);
+document.getElementById('pwToggle').addEventListener('click',togglePw);
 </script>
 </body>
 </html>
