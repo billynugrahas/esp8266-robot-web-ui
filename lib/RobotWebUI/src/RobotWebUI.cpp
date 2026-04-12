@@ -2,6 +2,14 @@
 #include "ArduinoTransport.h"
 #include "pages.h"
 #include <ESP8266WiFi.h>
+#include <EEPROM.h>
+
+// EEPROM layout for WiFi credential persistence (D-08)
+#define EEPROM_WIFI_SIZE   128
+#define WIFI_MAGIC          0xA5
+#define WIFI_ADDR_MAGIC     0
+#define WIFI_ADDR_SSID      1
+#define WIFI_ADDR_PASSWORD  33
 
 RobotWebUI::RobotWebUI()
     : _transport(nullptr), _motorCount(2) {
@@ -9,6 +17,17 @@ RobotWebUI::RobotWebUI()
 
 void RobotWebUI::begin(const char* ssid, const char* password, int motorCount) {
     _motorCount = motorCount;
+
+    _initialSSID = ssid;
+    _initialPassword = password;
+
+    // D-08: Try EEPROM credentials first for auto-connect on boot
+    String savedSSID, savedPassword;
+    if (loadWifiCredentials(savedSSID, savedPassword)) {
+        Serial.printf("[RobotWebUI] Found saved WiFi: %s\n", savedSSID.c_str());
+        ssid = savedSSID.c_str();
+        password = savedPassword.c_str();
+    }
 
     // Create Arduino transport implementation
     _transport = new ArduinoTransport();
@@ -120,10 +139,20 @@ void RobotWebUI::handleWSMessage(const char* data, size_t len) {
             _motorsActive = (cmd.direction != "stop");
         }
     } else if (strcmp(type, MsgType::WIFI_CMD) == 0) {
+        JsonDocument& doc = _protocol.document();
+        String action = doc["d"]["act"] | "";
+
+        if (action == "scan") {
+            handleWifiScan();
+        } else if (action == "connect") {
+            String ssid = doc["d"]["ssid"] | "";
+            String pw = doc["d"]["pw"] | "";
+            handleWifiConnect(ssid, pw);
+        }
+        // Still notify user callback for external handling
         if (_wifiCallback) {
             WiFiCmd cmd;
-            JsonDocument& doc = _protocol.document();
-            cmd.action = doc["d"]["act"] | "";
+            cmd.action = action;
             cmd.ssid = doc["d"]["ssid"] | "";
             cmd.password = doc["d"]["pw"] | "";
             _wifiCallback(cmd);
@@ -180,4 +209,122 @@ void RobotWebUI::emergencyStop() {
         _protocol.buildAck("motor_timeout", buf, sizeof(buf));
         _transport->wsBroadcast(buf, strlen(buf));
     }
+}
+
+void RobotWebUI::handleWifiScan() {
+    if (_scanInProgress) return;  // Guard against overlapping scans (Pitfall 4)
+    _scanInProgress = true;
+
+    WiFi.scanNetworksAsync([this](int networksFound) {
+        _scanInProgress = false;
+        char buf[768];
+        int len = _protocol.buildWifiScan(buf, sizeof(buf), networksFound);
+        if (len > 0) broadcast(buf, len);
+        WiFi.scanDelete();  // Free scan result memory (Pitfall 1)
+    });
+}
+
+void RobotWebUI::handleWifiConnect(const String& ssid, const String& password) {
+    if (ssid.length() == 0) return;  // Validate non-empty SSID (T-03-02)
+
+    // Save current credentials for fallback on failure
+    _fallbackSSID = WiFi.SSID();
+    _fallbackPassword = WiFi.psk();
+
+    WiFi.disconnect(true);
+
+    // Handle open networks (no password) per Pitfall 5
+    if (password.length() == 0) {
+        WiFi.begin(ssid.c_str());
+    } else {
+        WiFi.begin(ssid.c_str(), password.c_str());
+    }
+
+    // Wait for connection with 15-second timeout
+    unsigned long start = millis();
+    while (WiFi.status() != WL_CONNECTED && millis() - start < 15000) {
+        delay(100);
+    }
+
+    if (WiFi.status() == WL_CONNECTED) {
+        // D-08: Save to EEPROM for persistence across reboots
+        saveWifiCredentials(ssid.c_str(), password.c_str());
+
+        // D-05: Send success alert with new IP BEFORE the socket drops
+        char msg[128];
+        snprintf(msg, sizeof(msg), "Connected to %s -- IP: %s",
+                 ssid.c_str(), WiFi.localIP().toString().c_str());
+        broadcastAlert(msg, "success");
+        delay(200);  // Ensure alert reaches browser before potential disconnect
+    } else {
+        // D-05: Fall back to original network
+        WiFi.disconnect();
+        if (_fallbackSSID.length() > 0) {
+            WiFi.begin(_fallbackSSID.c_str(), _fallbackPassword.c_str());
+            unsigned long fbStart = millis();
+            while (WiFi.status() != WL_CONNECTED && millis() - fbStart < 10000) {
+                delay(100);
+            }
+        }
+        broadcastAlert("Connection failed -- check password", "danger");
+    }
+}
+
+void RobotWebUI::saveWifiCredentials(const char* ssid, const char* password) {
+    EEPROM.begin(EEPROM_WIFI_SIZE);
+
+    // Check if credentials already match -- avoid unnecessary flash writes (Pitfall 3)
+    if (EEPROM.read(WIFI_ADDR_MAGIC) == WIFI_MAGIC) {
+        bool match = true;
+        for (int i = 0; i < 32; i++) {
+            char expected = (i < (int)strlen(ssid)) ? ssid[i] : 0;
+            if (EEPROM.read(WIFI_ADDR_SSID + i) != expected) { match = false; break; }
+        }
+        if (match) {
+            for (int i = 0; i < 64; i++) {
+                char expected = (i < (int)strlen(password)) ? password[i] : 0;
+                if (EEPROM.read(WIFI_ADDR_PASSWORD + i) != expected) { match = false; break; }
+            }
+        }
+        if (match) { EEPROM.end(); return; }  // No write needed
+    }
+
+    EEPROM.write(WIFI_ADDR_MAGIC, WIFI_MAGIC);
+    // Write SSID (32 bytes, null-padded)
+    for (int i = 0; i < 32; i++) {
+        EEPROM.write(WIFI_ADDR_SSID + i, (i < (int)strlen(ssid)) ? ssid[i] : 0);
+    }
+    // Write password (64 bytes, null-padded)
+    for (int i = 0; i < 64; i++) {
+        EEPROM.write(WIFI_ADDR_PASSWORD + i, (i < (int)strlen(password)) ? password[i] : 0);
+    }
+    EEPROM.commit();
+    EEPROM.end();
+    Serial.printf("[RobotWebUI] WiFi credentials saved to EEPROM\n");
+}
+
+bool RobotWebUI::loadWifiCredentials(String& ssid, String& password) {
+    EEPROM.begin(EEPROM_WIFI_SIZE);
+    if (EEPROM.read(WIFI_ADDR_MAGIC) != WIFI_MAGIC) {
+        EEPROM.end();
+        return false;
+    }
+    char bufSSID[33] = {0};
+    char bufPw[65] = {0};
+    for (int i = 0; i < 32; i++) bufSSID[i] = EEPROM.read(WIFI_ADDR_SSID + i);
+    bufSSID[32] = '\0';
+    for (int i = 0; i < 64; i++) bufPw[i] = EEPROM.read(WIFI_ADDR_PASSWORD + i);
+    bufPw[64] = '\0';
+    EEPROM.end();
+
+    if (bufSSID[0] == '\0') return false;
+    ssid = String(bufSSID);
+    password = String(bufPw);
+    return true;
+}
+
+void RobotWebUI::broadcastAlert(const char* msg, const char* alertType) {
+    char buf[192];
+    _protocol.buildAlert(msg, alertType, buf, sizeof(buf));
+    broadcast(buf, strlen(buf));
 }

@@ -41,6 +41,13 @@ private:
     bool _motorsActive = false;
     static const unsigned long MOTOR_SAFETY_TIMEOUT = 500; // ms
 
+    // WiFi scan/connect state (Phase 3)
+    bool _scanInProgress = false;
+    String _fallbackSSID;
+    String _fallbackPassword;
+    String _initialSSID;
+    String _initialPassword;
+
     // Internal handlers
     void handleWSMessage(const char* data, size_t len);
     void handleWSConnect(bool connected);
@@ -50,4 +57,9 @@ private:
 
     // Internal broadcast helper (serializes protocol message and sends)
     void broadcast(char* buf, size_t len);
+    void handleWifiScan();
+    void handleWifiConnect(const String& ssid, const String& password);
+    void saveWifiCredentials(const char* ssid, const char* password);
+    bool loadWifiCredentials(String& ssid, String& password);
+    void broadcastAlert(const char* msg, const char* alertType);
 };

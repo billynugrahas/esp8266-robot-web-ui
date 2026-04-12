@@ -37,6 +37,7 @@ public:
     void buildBoolean(int index, bool state, char* buf, size_t bufSize);
     void buildAck(const char* msg, char* buf, size_t bufSize);
     int buildWifiScan(char* buf, size_t bufSize, int networkCount);
+    void buildAlert(const char* msg, const char* alertType, char* buf, size_t bufSize);
 
     // Parse incoming message type. Returns nullptr for unknown types.
     const char* parseMessageType(const char* data, size_t len);

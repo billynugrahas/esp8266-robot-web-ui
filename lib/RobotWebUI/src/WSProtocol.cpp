@@ -75,6 +75,15 @@ int WSProtocol::buildWifiScan(char* buf, size_t bufSize, int networkCount) {
     return serializeJson(_doc, buf, bufSize);
 }
 
+void WSProtocol::buildAlert(const char* msg, const char* alertType, char* buf, size_t bufSize) {
+    _doc.clear();
+    _doc["t"] = MsgType::ACK;
+    JsonObject d = _doc["d"].to<JsonObject>();
+    d["msg"] = msg;
+    d["alert"] = alertType;
+    serializeJson(_doc, buf, bufSize);
+}
+
 const char* WSProtocol::parseMessageType(const char* data, size_t len) {
     _doc.clear();
     DeserializationError error = deserializeJson(_doc, data, len);
