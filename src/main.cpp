@@ -25,7 +25,7 @@ bool simSwitches[4] = {true, false, true, false};
 int simSwitchToggle = 0;
 
 void onMotor(const MotorCmd& cmd) {
-    Serial.printf("[Demo] Motor cmd: dir=%s spd=%d%%\n", cmd.direction.c_str(), cmd.speed);
+    Serial.printf("[Motor] %s (speed %d%%)\n", cmd.direction.c_str(), cmd.speed);
 }
 
 void setup() {

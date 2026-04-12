@@ -98,11 +98,20 @@ void ArduinoTransport::onWSEvent(AsyncWebSocket *server, AsyncWebSocketClient *c
             Serial.printf("[RobotWebUI] WS client #%u disconnected\n", client->id());
             if (_onDisconnect) _onDisconnect(false);
             break;
-        case WS_EVT_DATA:
-            if (_onMessage && data && len > 0) {
-                _onMessage((const char*)data, len);
+        case WS_EVT_DATA: {
+            AwsFrameInfo *info = (AwsFrameInfo*)arg;
+            if (info->final && info->index == 0 && info->len == len) {
+                // Single-frame message -- process directly
+                if (_onMessage && data && len > 0) {
+                    Serial.printf("[WS] recv %d bytes: %.*s\n", (int)len, (int)len, (const char*)data);
+                    _onMessage((const char*)data, len);
+                }
+            } else {
+                Serial.printf("[WS] multi-frame: final=%d index=%u len=%u chunk=%u\n",
+                    info->final, (unsigned)info->index, (unsigned)info->len, (unsigned)len);
             }
             break;
+        }
         default:
             break;
     }
