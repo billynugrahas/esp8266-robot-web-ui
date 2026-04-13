@@ -59,6 +59,9 @@ body{font-family:var(--font-stack);background:var(--bg);color:var(--text);min-he
 .ir-badge{display:inline-block;padding:6px 16px;border-radius:var(--radius-badge);font-size:0.85rem;font-weight:600;transition:background var(--transition-normal),color var(--transition-normal)}
 .ir-badge.clear{background:var(--success-bg);color:#86efac}
 .ir-badge.detected{background:var(--danger-bg);color:#fca5a5}
+.obstacle-badge{display:inline-block;padding:6px 16px;border-radius:var(--radius-badge);font-size:0.85rem;font-weight:600;transition:background var(--transition-normal),color var(--transition-normal)}
+.obstacle-badge.clear{background:var(--success-bg);color:#86efac}
+.obstacle-badge.detected{background:var(--danger-bg);color:#fca5a5}
 .switch-badge{display:inline-flex;align-items:center;gap:8px;margin:4px 0;padding:4px 0}
 .switch-badge .sw-name{font-size:0.85rem;color:var(--text-muted);min-width:70px}
 .sw-state{display:inline-block;padding:2px 10px;border-radius:var(--radius-badge);font-size:0.75rem;font-weight:700;transition:background var(--transition-normal),color var(--transition-normal)}
@@ -116,6 +119,7 @@ body{font-family:var(--font-stack);background:var(--bg);color:var(--text);min-he
 <span class="dist-value" id="dist-val">--</span>
 <span class="dist-unit">cm</span>
 </div>
+<div class="obstacle-badge clear" id="obstacle-display">Obstacle Clear</div>
 </div>
 <div class="section">
 <p class="section-title">IR PROXIMITY</p>
@@ -231,10 +235,17 @@ function updateDist(d){
 if(d.cm===undefined)return;
 var val=document.getElementById('dist-val');
 var el=document.getElementById('dist-display');
+var ob=document.getElementById('obstacle-display');
 val.textContent=d.cm.toFixed(1);
 var bg=d.cm>30?'var(--success-bg)':d.cm>15?'#451a03':'var(--danger-bg)';
 el.style.background=bg;
-if(d.cm<15)showAlert('Obstacle detected','danger');
+if(d.cm<15){
+ob.textContent='Obstacle Detected';
+ob.className='obstacle-badge detected';
+}else{
+ob.textContent='Obstacle Clear';
+ob.className='obstacle-badge clear';
+}
 }
 function updateIR(d){
 var el=document.getElementById('ir-display');
