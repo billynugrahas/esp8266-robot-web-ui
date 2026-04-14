@@ -28,6 +28,14 @@ bool ArduinoTransport::begin(const char* ssid, const char* password, uint16_t po
 
     Serial.printf("\n[RobotWebUI] Connected! IP: %s\n", WiFi.localIP().toString().c_str());
 
+    // Start mDNS responder — access via http://robot.local
+    if (MDNS.begin("robot")) {
+        MDNS.addService("http", "tcp", 80);
+        Serial.println("[RobotWebUI] mDNS started: http://robot.local");
+    } else {
+        Serial.println("[RobotWebUI] mDNS failed to start");
+    }
+
     // Register WebSocket event handler
     _ws.onEvent([this](AsyncWebSocket *server, AsyncWebSocketClient *client,
                         AwsEventType type, void *arg, uint8_t *data, size_t len) {
@@ -43,6 +51,9 @@ bool ArduinoTransport::begin(const char* ssid, const char* password, uint16_t po
 }
 
 void ArduinoTransport::loop() {
+    // Required on ESP8266 to process mDNS queries
+    MDNS.update();
+
     // Periodic client cleanup to prevent stale client accumulation (Pitfall 2)
     if (millis() - _lastCleanup >= CLEANUP_INTERVAL) {
         _ws.cleanupClients();
